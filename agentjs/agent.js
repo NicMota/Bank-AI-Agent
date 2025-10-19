@@ -165,15 +165,31 @@ function splitMessageByWords(text, maxLength = 1500) {
   const parts = [];
   let currentPart = "";
 
-  const words = text.split(/\s+/); // divide por espaços em branco
-  for (const word of words) {
-    // se adicionar a próxima palavra estoura o limite
-    if ((currentPart + " " + word).trim().length > maxLength) {
-      parts.push(currentPart.trim());
+  // Divide em linhas para tentar preservar quebras
+  const lines = text.split(/\n/);
 
-      currentPart = word; // começa um novo bloco
+  for (const line of lines) {
+    // Se a linha inteira estoura o limite
+    if (line.length > maxLength) {
+      // quebra a linha grande em pedaços menores sem cortar palavras
+      const words = line.split(/\s+/);
+      for (const word of words) {
+        if ((currentPart + " " + word).trim().length > maxLength) {
+          parts.push(currentPart.trim());
+          currentPart = word;
+        } else {
+          currentPart += (currentPart.length === 0 ? "" : " ") + word;
+        }
+      }
+      currentPart += "\n"; // adiciona a quebra de linha depois do bloco
     } else {
-      currentPart += (currentPart.length === 0 ? "" : " ") + word;
+      // se caber no bloco atual, adiciona com quebra de linha
+      if ((currentPart + "\n" + line).trim().length > maxLength) {
+        parts.push(currentPart.trim());
+        currentPart = line;
+      } else {
+        currentPart += (currentPart.length === 0 ? "" : "\n") + line;
+      }
     }
   }
 
@@ -185,9 +201,10 @@ function splitMessageByWords(text, maxLength = 1500) {
 }
 
 
+
 export async function receive_prompt(message) {
 
-  if (message.startsWith('/') && message.startsWith('./')) {
+  if (message.startsWith('/') || message.startsWith('./')) {
     if (fs.existsSync(message)) {
       console.log("Lendo PDF...");
       try {
@@ -222,5 +239,7 @@ export async function receive_prompt(message) {
 
   return text;
 } 
+
+receive_prompt('./extrato.pdf');
 
 
