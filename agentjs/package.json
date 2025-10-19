@@ -1,0 +1,25 @@
+{
+  "name": "agent",
+  "version": "1.0.0",
+  "description": "ai agent for finance management",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@langchain/core": "^0.2.16",
+    "@langchain/google-genai": "^0.0.17",
+    "dotenv": "^16.4.5",
+    "langchain": "^0.2.7",
+    "pdf-to-text": "^0.0.7",
+    "readline-sync": "^1.4.10",
+    "zod": "^3.23.8"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "Bank-AI-Agent"
+  },
+  "author": "nic",
+  "license": "ISC"
+}
