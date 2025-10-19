@@ -9,7 +9,8 @@
     "@langchain/google-genai": "^0.0.17",
     "dotenv": "^16.4.5",
     "langchain": "^0.2.7",
-    "pdf-to-text": "^0.0.7",
+    "pdf-parse": "^2.4.3",
+    "pdfreader": "^3.0.7",
     "readline-sync": "^1.4.10",
     "zod": "^3.23.8"
   },
