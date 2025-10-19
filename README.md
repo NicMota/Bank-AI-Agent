@@ -104,10 +104,11 @@ A criação de uma conta na ferramenta SandBox da Twilio é indispensável, pois
 O usuário terá que criar uma conta grátis, obter o Account SID e AuthToken no Twilio Console (Página que você entra logo após se cadastrar/logar),
 desça até a seção 'Account Info' e copie os campos para o .env
 
-
+![Local SID e Token](./img_readme/como_copiar_seed.jpg)
 
 Após isso, clique na seção de 'Messaging' na navbar lateral do console, clique em 'Try it out', clique em 'Send a WhatsApp message'.
 Por fim, conecte ao handler da Twilio escaneando o QRCOde.
+
 ```Ini, TOML
 # Chave da API do Gemini
 GEMINI_API_KEY="SUA_CHAVE_GEMINI_AQUI"
