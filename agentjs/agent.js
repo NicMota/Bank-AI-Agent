@@ -6,6 +6,7 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { ChatPromptTemplate, PromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { DynamicStructuredTool } from '@langchain/core/tools';
+import {MemorySaver} from '@langchain/langgraph';
 // ✅ Este é o caminho correto (para as versões que você vai instalar)
 
 import promptSync  from 'prompt-sync';
@@ -19,26 +20,12 @@ const prompt = promptSync();
 const apiKey = process.env.GEMINI_API_KEY;
 const chatHistory = [];
 // --- 1. Schemas (Zod) ---
-const TopExpenseSchema = z.object({
-  description: z.string().describe('Define a estrutura de uma despesa principal.'),
-  value: z.number(),
-  category: z.string(),
-});
-const TransactionSummarySchema = z.object({
-  total_income: z.number(),
-  total_expense: z.number(),
-  balance: z.number(),
-  expenses_by_category: z.record(z.number(),z.string()).describe('Um objeto onde a chave é a categoria (string) e o valor é o total (float)'),
-  top_expenses: z.array(TopExpenseSchema),
-  tips: z.array(z.string()),
-});
 
 // --- 2. LLM ---
 const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash", 
   temperature: 0,
   apiKey: apiKey,
-  maxOutputTokens: 4096,
   streaming:false
 });
 
@@ -53,6 +40,8 @@ const financeDoubtTool = new DynamicStructuredTool({
     return response.content; 
   },
 });
+
+
 const analyseTransactionsTool = new DynamicStructuredTool({
   name: 'analyse_transactions',
   description: `Chama quando o input e um extrato bancario, analisa o extrato e retorna informações financeiras estruturadas.
@@ -62,19 +51,21 @@ const analyseTransactionsTool = new DynamicStructuredTool({
     transactions: z.string().describe("O conteúdo de texto completo do extrato bancário."),
   }),
   func: async ({ transactions }) => {
-    const parser = StructuredOutputParser.fromZodSchema(TransactionSummarySchema);
-    const formatInstructions = parser.getFormatInstructions();
-    const prompt = new PromptTemplate({
-      template: `Analise o seguinte extrato bancário e retorne um JSON estruturado em:
-        {format_instructions}
-        Extrato:
-        {transactions}`,
-      inputVariables: ['transactions'],
-      partialVariables: { format_instructions: formatInstructions },
-    });
-    const chain = prompt.pipe(llm).pipe(parser);
+   
+    const prompt = `Analise o seguinte extrato bancário e retorne uma resposta contendo
+        -maiores gastos do periodo por categoria ( ex: alimentação, aluguel, etc)
+        -maiores gastos
+        -total de entrada
+        -total de saída
+        -saldo
+        -dicas para melhorar o gerenciamento
+
+        EXTRATO:
+        ${transactions}
+      `
+  
     try {
-      const parsed = await chain.invoke({ transactions: transactions });
+      const parsed = await llm.invoke(prompt);
       console.log("[analyse_transactions] Parse concluído:", parsed);
       return parsed; 
     } catch (e) {
@@ -162,13 +153,37 @@ const agentPrompt = ChatPromptTemplate.fromMessages([
 ]);
 
 
+const checkpointer = new MemorySaver();
 
 const agent = await createAgent({
   model:llm,
   tools,
   prompt: agentPrompt,
+  checkpointer
 });
 
+function splitMessageByWords(text, maxLength = 1500) {
+  const parts = [];
+  let currentPart = "";
+
+  const words = text.split(/\s+/); // divide por espaços em branco
+  for (const word of words) {
+    // se adicionar a próxima palavra estoura o limite
+    if ((currentPart + " " + word).trim().length > maxLength) {
+      parts.push(currentPart.trim());
+
+      currentPart = word; // começa um novo bloco
+    } else {
+      currentPart += (currentPart.length === 0 ? "" : " ") + word;
+    }
+  }
+
+  if (currentPart.trim().length > 0) {
+    parts.push(currentPart.trim());
+  }
+
+  return parts;
+}
 
 
 export async function receive_prompt(message) {
@@ -193,15 +208,22 @@ export async function receive_prompt(message) {
   }
   
     const result = await agent.invoke({
-      messages:[{role:"user",content:message, chatHistory:chatHistory}]
-    });
+      messages:[{role:"user",content:message},
+       
+      ]},
+      { configurable: { thread_id: "1" } }
+    );
     
-    chatHistory.push({ role: 'human', content: message });
+    
+    const text = splitMessageByWords(result.messages.at(-1).content,1500);
 
-    console.log("\nAssistente:", result.messages[1].content);
+    console.log("\nAssistente:", text);
 
     return result.messages[1].content;
+} 
+
+
+while(1){
+  let p = prompt();
+  await receive_prompt(p);
 }
-
-
-await receive_prompt('./extrato.pdf');
