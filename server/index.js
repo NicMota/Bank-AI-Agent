@@ -1,40 +1,33 @@
 // index.js
 
-require("dotenv").config();
-const express = require("express");
+// --- [MUDANÇA] Conversão para ES Modules ---
+import "dotenv/config"; // Substitui require("dotenv").config()
+import express from "express";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid"; // Substitui o require('uuid')
+import twilio from "twilio"; // Importa a função 'twilio'
 
-// --- IMPORTAÇÕES ---
-const fs = require("fs");
-const path = require("path");
-const axios = require("axios");
-const { v4: uuidv4 } = require("uuid"); // Lembre-se: npm install uuid@8.3.2
-// const { PythonShell } = require("python-shell"); // [REMOVIDO TEMPORARIAMENTE]
-// --- FIM DAS IMPORTAÇÕES ---
+import { receive_prompt } from "../agentjs/agent.js";
+// --- FIM DAS MUDANÇAS ---
 
 const app = express();
 
-// --- GERENCIADOR DE ESTADO DE CONVERSA ---
 const userSessions = {};
-// --- FIM DO GERENCIADOR DE ESTADO ---
 
-// --- CONFIGURAÇÃO DE MIDDLEWARE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 3000;
 
-// --- CONFIGURAÇÃO DO CLIENTE TWILIO ---
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER;
-const client = require("twilio")(accountSid, authToken);
 
-/**
- * =======================================================
- * FUNÇÃO PARA ENVIAR MENSAGENS (VIA TWILIO)
- * (Sem alterações)
- * =======================================================
- */
+// --- [MUDANÇA] Inicializa o 'client' a partir do import ---
+const client = twilio(accountSid, authToken);
+
 async function sendTwilioMessage(to, body, mediaUrl = null, actions = null) {
   console.log(`Enviando mensagem para ${to}: "${body}"`);
   try {
@@ -49,38 +42,17 @@ async function sendTwilioMessage(to, body, mediaUrl = null, actions = null) {
   }
 }
 
-/**
- * =======================================================
- * FUNÇÃO PARA CHAMAR O AGENTE PYTHON
- * [REMOVIDO TEMPORARIAMENTE]
- * =======================================================
- */
-/*
-async function runPythonAgent(pdfPath) {
-  // ... (código python-shell removido)
-}
-*/
-
-// --- ROTAS DO SERVIDOR ---
 app.get("/", (req, res) => {
   res.send("O agente está funcionando com Express + Twilio!");
 });
 
-/**
- * =======================================================
- * WEBHOOK DE RECEBIMENTO DE MENSAGENS (TWILIO)
- * [LÓGICA REESTRUTURADA]
- * =======================================================
- */
 app.post("/twilio-webhook", async (req, res) => {
   // --- 1. Coletar todos os dados da requisição ---
   const incomingMsg = req.body.Body;
   const fromNumber = req.body.From;
   const numMedia = parseInt(req.body.NumMedia || 0);
 
-  // Proteção para o caso de 'incomingMsg' ser nulo (quando só tem mídia)
   const msgLower = (incomingMsg || "").toLowerCase().trim();
-
   const currentUserState = userSessions[fromNumber] || {
     state: null,
     data: {},
@@ -113,16 +85,14 @@ app.post("/twilio-webhook", async (req, res) => {
 
     // 2.2. Estado: Esperando um PDF para análise
   } else if (currentUserState.state === "AWAITING_PDF") {
-    // O usuário está no estado correto, agora verificamos se ele enviou mídia
     if (numMedia > 0) {
       const mediaUrl = req.body.MediaUrl0;
       const mediaType = req.body.MediaContentType0;
 
-      // Verifica se a mídia é um PDF
       if (mediaType === "application/pdf") {
-        // --- INÍCIO DA LÓGICA DE PROCESSAMENTO DE PDF ---
-        // (Esta é a sua lógica antiga, agora movida para cá)
         console.log(`Mídia recebida: ${mediaUrl} (Tipo: ${mediaType})`);
+
+        // [NOTA] process.cwd() está correto pois você roda o node da raiz
         const uploadsDir = path.join(process.cwd(), "tmp/public/incoming_pdf/");
         if (!fs.existsSync(uploadsDir))
           fs.mkdirSync(uploadsDir, { recursive: true });
@@ -154,37 +124,14 @@ app.post("/twilio-webhook", async (req, res) => {
           });
           console.log(`Arquivo salvo com sucesso: ${localFilePath}`);
 
-          // --- SIMULAÇÃO DE CHAMADA PYTHON ---
-          console.log(
-            "[Node] SIMULAÇÃO: Chamando LLM de análise de extrato..."
-          );
-          const analysisResult = {
-            balance: 1234.56,
-            total_income: 5000.0,
-            total_expense: 3765.44,
-            tips_financeiras: [
-              "(Dica mockada: Você gastou muito com iFood. Considere definir um orçamento para delivery.)",
-            ],
-          };
+          // --- [MUDANÇA] Chamando sua nova função JS ---
+          // (Assumindo que receive_prompt é assíncrona)
+          await receive_prompt(localFilePath);
+          // (Se não for assíncrona, remova o await)
 
-          if (analysisResult) {
-            const summaryMsg =
-              `*Análise do BTG Concluída!* 🚀\n\n` +
-              `Aqui está um resumo do seu extrato:\n\n` +
-              `Balanço: *R$ ${analysisResult.balance.toFixed(2)}*\n` +
-              `Total de Receita: R$ ${analysisResult.total_income.toFixed(
-                2
-              )}\n` +
-              `Total de Despesas: R$ ${analysisResult.total_expense.toFixed(
-                2
-              )}\n\n` +
-              `*Dica Financeira do BTG:*\n_${analysisResult.tips_financeiras[0]}_`;
-            await sendTwilioMessage(fromNumber, summaryMsg);
-          }
           fs.unlinkSync(localFilePath); // Limpa o arquivo
           console.log(`Arquivo temporário deletado: ${localFilePath}`);
 
-          // Limpa o estado, pois a tarefa foi concluída
           delete userSessions[fromNumber];
         } catch (error) {
           console.error("Erro no processo de download/análise:", error.message);
@@ -193,15 +140,12 @@ app.post("/twilio-webhook", async (req, res) => {
             "Desculpe, não consegui processar o seu arquivo. Parece que houve um erro no envio. Por favor, tente novamente."
           );
         }
-        // --- FIM DA LÓGICA DE PROCESSAMENTO DE PDF ---
       } else {
-        // Mídia recebida, mas não é PDF
         const errorMsg =
           "Desculpe, este assistente aceita apenas arquivos no formato *PDF*.\n\nPor favor, envie seu extrato novamente ou digite *cancelar* para voltar.";
         await sendTwilioMessage(fromNumber, errorMsg);
       }
     } else {
-      // Estado era AWAITING_PDF, mas o usuário enviou TEXTO
       const errorMsg =
         "Eu estava esperando um *arquivo PDF*.\n\nPor favor, envie seu extrato ou digite *cancelar* para voltar ao menu.";
       await sendTwilioMessage(fromNumber, errorMsg);
@@ -232,11 +176,12 @@ app.post("/twilio-webhook", async (req, res) => {
     currentUserState.data.expenses = incomingMsg;
     const { question, income, expenses } = currentUserState.data;
 
-    // --- SIMULAÇÃO DE CHAMADA PYTHON ---
     console.log(
       "[Node] SIMULAÇÃO: Chamando LLM de Dúvidas com:",
       currentUserState.data
     );
+    // TODO: Chamar seu agent.js aqui
+    // const llmAnswer = await receive_prompt_question(currentUserState.data);
     const llmAnswer =
       `*Análise do BTG Pactual:*\n\n` +
       `_(Resposta do LLM: Com base na sua renda de *${income}* e gastos com *${expenses}*, a melhor forma de *${question}* é... [placeholder da IA])_\n\n` +
@@ -279,11 +224,13 @@ app.post("/twilio-webhook", async (req, res) => {
     const { goalDescription, monthlyIncome, timeframe, goalPrice } =
       currentUserState.data;
 
-    // --- SIMULAÇÃO DE CHAMADA PYTHON ---
     console.log(
       "[Node] SIMULAÇÃO: Chamando LLM de Metas com:",
       currentUserState.data
     );
+    const objetoMeta =
+      goalDescription + " " + monthlyIncome + " " + timeframe + " " + goalPrice;
+    receive_prompt(objetoMeta);
     const llmPlan =
       `*Plano de Metas (BTG Pactual):*\n\n` +
       `_(Resposta do LLM: Para *${goalDescription}* (R$${goalPrice}) em *${timeframe}*, ganhando *R$${monthlyIncome}*, você deve... [placeholder da IA])_\n\n` +
@@ -295,7 +242,6 @@ app.post("/twilio-webhook", async (req, res) => {
     // 2.5. Comandos do Menu (Nenhum estado ativo)
     // ==============================================================
   } else if (msgLower === "1") {
-    // --- INICIA A CONVERSA DE DÚVIDA ---
     userSessions[fromNumber] = {
       state: "AWAITING_FINANCIAL_QUESTION",
       data: {},
@@ -310,7 +256,6 @@ app.post("/twilio-webhook", async (req, res) => {
       "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
     await sendTwilioMessage(fromNumber, responseMsg);
   } else if (msgLower === "2") {
-    // --- [MUDANÇA AQUI] Apenas define o estado ---
     userSessions[fromNumber] = {
       state: "AWAITING_PDF",
       data: {},
@@ -319,7 +264,6 @@ app.post("/twilio-webhook", async (req, res) => {
       "Certo. Para que eu possa analisar seu extrato, por favor, me envie o *arquivo PDF* do seu banco.";
     await sendTwilioMessage(fromNumber, responseMsg);
   } else if (msgLower === "3") {
-    // --- INICIA A CONVERSA DE META ---
     userSessions[fromNumber] = {
       state: "AWAITING_GOAL_DESCRIPTION",
       data: {},
@@ -338,14 +282,12 @@ app.post("/twilio-webhook", async (req, res) => {
     // 2.6. Bloco Padrão (Sem estado e comando não reconhecido)
     // ==============================================================
   } else {
-    // Verifica se o usuário enviou mídia sem ser solicitado
     if (numMedia > 0) {
       await sendTwilioMessage(
         fromNumber,
         "Recebi um arquivo, mas não tenho certeza do que fazer com ele. 🤔\n\nPor favor, digite *Menu* para ver as opções e selecionar o que deseja."
       );
     } else {
-      // Usuário enviou texto aleatório
       const responseMsg =
         `Desculpe, não reconheci o comando "${incomingMsg}".\n` +
         `Por favor, digite "Menu" para ver todas as opções disponíveis.`;

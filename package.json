@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,12 +11,21 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@langchain/google-genai": "^1.0.0",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "langchain": "^1.0.1",
     "python-shell": "^5.0.0",
     "twilio": "^5.10.3",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "@langchain/core": "^0.2.16",
+    "@langchain/google-genai": "^0.0.17",
+    "dotenv": "^16.4.5",
+    "langchain": "^0.2.7",
+    "pdf-to-text": "^0.0.7",
+    "readline-sync": "^1.4.10",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^24.8.1"
