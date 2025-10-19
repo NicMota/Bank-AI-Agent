@@ -139,7 +139,6 @@ const systemPrompt = `
     - Mesmo que a pergunta do usuário seja simples, desenvolva um raciocínio amplo, contextualize, explique conceitos financeiros, traga exemplos práticos, cenários e recomendações adicionais.
     - Use um tom profissional, cordial e consultivo, como um especialista do BTG Pactual.
     - Finalize sempre com um **resumo prático** e uma **chamada para ação** relacionada aos serviços do BTG.
-    - Você é um agente de whatsapp, então suas respostas não devem ter mais do que 1600 caracteres
     Evite respostas no estilo “one-liner” ou apenas listas secas.
     `;
 
@@ -188,7 +187,7 @@ function splitMessageByWords(text, maxLength = 1500) {
 
 export async function receive_prompt(message) {
 
-  if (message.startsWith('./')) {
+  if (message.startsWith('/') && message.startsWith('./')) {
     if (fs.existsSync(message)) {
       console.log("Lendo PDF...");
       try {
@@ -225,4 +224,3 @@ export async function receive_prompt(message) {
 } 
 
 
-receive_prompt('./extrato.pdf');
