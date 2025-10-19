@@ -57,9 +57,9 @@ const analyseTransactionsTool = new DynamicStructuredTool({
     const formatInstructions = parser.getFormatInstructions();
     const prompt = new PromptTemplate({
       template: `Analise o seguinte extrato bancário e retorne um JSON estruturado em:
-{format_instructions}
-Extrato:
-{transactions}`,
+        {format_instructions}
+        Extrato:
+        {transactions}`,
       inputVariables: ['transactions'],
       partialVariables: { format_instructions: formatInstructions },
     });
@@ -121,8 +121,9 @@ const agentExecutor = new AgentExecutor({
 });
 
 // --- 5. Execução ---
-async function main() {
-  let message = readlineSync.question("Você: "); 
+export async function receive_prompt(message) {
+
+
 
   if (message.startsWith('./')) {
     if (fs.existsSync(message)) {
@@ -148,4 +149,3 @@ async function main() {
   console.log("\nAssistente:", result.output);
 }
 
-main();
