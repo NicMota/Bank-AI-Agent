@@ -1,18 +1,23 @@
 // agent.js
 import 'dotenv/config';
+
+
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { ChatPromptTemplate, PromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 // ✅ Este é o caminho correto (para as versões que você vai instalar)
-import { AgentExecutor, createToolCallingAgent } from "langchain/agents"; 
+
+import promptSync  from 'prompt-sync';
+import { createAgent } from 'langchain';
 import { z } from 'zod';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
 import { readPdf } from './tools.js';
 
+const prompt = promptSync();
 const apiKey = process.env.GEMINI_API_KEY;
-
+const chatHistory = [];
 // --- 1. Schemas (Zod) ---
 const TopExpenseSchema = z.object({
   description: z.string().describe('Define a estrutura de uma despesa principal.'),
@@ -23,7 +28,7 @@ const TransactionSummarySchema = z.object({
   total_income: z.number(),
   total_expense: z.number(),
   balance: z.number(),
-  expenses_by_category: z.record(z.number()).describe('Um objeto onde a chave é a categoria (string) e o valor é o total (float)'),
+  expenses_by_category: z.record(z.number(),z.string()).describe('Um objeto onde a chave é a categoria (string) e o valor é o total (float)'),
   top_expenses: z.array(TopExpenseSchema),
   tips: z.array(z.string()),
 });
@@ -50,7 +55,9 @@ const financeDoubtTool = new DynamicStructuredTool({
 });
 const analyseTransactionsTool = new DynamicStructuredTool({
   name: 'analyse_transactions',
-  description: 'Chama quando o input e um extrato bancario, analisa o extrato e retorna informações financeiras estruturadas.',
+  description: `Chama quando o input e um extrato bancario, analisa o extrato e retorna informações financeiras estruturadas.
+    
+  `,
   schema: z.object({
     transactions: z.string().describe("O conteúdo de texto completo do extrato bancário."),
   }),
@@ -141,7 +148,7 @@ const systemPrompt = `
     - Mesmo que a pergunta do usuário seja simples, desenvolva um raciocínio amplo, contextualize, explique conceitos financeiros, traga exemplos práticos, cenários e recomendações adicionais.
     - Use um tom profissional, cordial e consultivo, como um especialista do BTG Pactual.
     - Finalize sempre com um **resumo prático** e uma **chamada para ação** relacionada aos serviços do BTG.
-
+    - Você é um agente de whatsapp, então suas respostas não devem ter mais do que 1600 caracteres
     Evite respostas no estilo “one-liner” ou apenas listas secas.
     `;
 
@@ -154,19 +161,16 @@ const agentPrompt = ChatPromptTemplate.fromMessages([
   new MessagesPlaceholder('agent_scratchpad'), 
 ]);
 
-const agent = await createToolCallingAgent({
-  llm:llm.bind({streaming:false}),
+
+
+const agent = await createAgent({
+  model:llm,
   tools,
   prompt: agentPrompt,
 });
 
-const agentExecutor = new AgentExecutor({
-  agent,
-  tools,
-  verbose: true, 
-});
 
-// --- 5. Execução ---
+
 export async function receive_prompt(message) {
 
   if (message.startsWith('./')) {
@@ -188,16 +192,16 @@ export async function receive_prompt(message) {
     }
   }
   
-    const result = await agentExecutor.invoke({
-        input: message,
-        chat_history: [], // Envia histórico vazio
+    const result = await agent.invoke({
+      messages:[{role:"user",content:message, chatHistory:chatHistory}]
     });
+    
+    chatHistory.push({ role: 'human', content: message });
 
-    console.log("\nAssistente:", result.output);
+    console.log("\nAssistente:", result.messages[1].content);
 
-    return result.output;
+    return result.messages[1].content;
 }
 
 
-
-await receive_prompt("./extrato.pdf");
+await receive_prompt('./extrato.pdf');
