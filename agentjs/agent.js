@@ -33,7 +33,8 @@ const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash", 
   temperature: 0,
   apiKey: apiKey,
-  maxOutputTokens: 4096
+  maxOutputTokens: 4096,
+  streaming:false
 });
 
 // --- 3. Ferramentas ---
@@ -49,7 +50,7 @@ const financeDoubtTool = new DynamicStructuredTool({
 });
 const analyseTransactionsTool = new DynamicStructuredTool({
   name: 'analyse_transactions',
-  description: 'Analisa o extrato e retorna informações financeiras estruturadas.',
+  description: 'Chama quando o input e um extrato bancario, analisa o extrato e retorna informações financeiras estruturadas.',
   schema: z.object({
     transactions: z.string().describe("O conteúdo de texto completo do extrato bancário."),
   }),
@@ -154,7 +155,7 @@ const agentPrompt = ChatPromptTemplate.fromMessages([
 ]);
 
 const agent = await createToolCallingAgent({
-  llm,
+  llm:llm.bind({streaming:false}),
   tools,
   prompt: agentPrompt,
 });
@@ -162,7 +163,7 @@ const agent = await createToolCallingAgent({
 const agentExecutor = new AgentExecutor({
   agent,
   tools,
-  verbose: false, 
+  verbose: true, 
 });
 
 // --- 5. Execução ---
@@ -174,6 +175,8 @@ export async function receive_prompt(message) {
       try {
         message = await readPdf(message); 
         console.log("PDF lido com sucesso.");
+
+        
       } catch (e) {
         console.log("Erro ao ler PDF:", e.message);
         return; 
@@ -191,8 +194,10 @@ export async function receive_prompt(message) {
     });
 
     console.log("\nAssistente:", result.output);
+
+    return result.output;
 }
 
 
 
-await receive_prompt("viajar para europa com 5000 reais, ganho 2000 por mes e gasto 1000 por mes, quero fazer isso ate 2028 ");
+await receive_prompt("./extrato.pdf");
