@@ -182,6 +182,14 @@ app.post("/twilio-webhook", async (req, res) => {
     );
     // TODO: Chamar seu agent.js aqui
     // const llmAnswer = await receive_prompt_question(currentUserState.data);
+    const promptMsg =
+      "eu tenho uma questão sobre finanças pessoais: " +
+      question +
+      ", tenho uma renda em torno de:" +
+      income +
+      ", minha maior despesa é" +
+      expenses;
+    receive_prompt(promptMsg);
     const llmAnswer =
       `*Análise do BTG Pactual:*\n\n` +
       `_(Resposta do LLM: Com base na sua renda de *${income}* e gastos com *${expenses}*, a melhor forma de *${question}* é... [placeholder da IA])_\n\n` +
