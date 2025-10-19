@@ -1,28 +1,54 @@
-# Bank-AI-Agent
+# 🤖 Bank-AI-Agent
 
-Um assistente pessoal bancário e sistema multiagente desenvolvido com Inteligência Artificial para revolucionar a interação do usuário com suas finanças.
+Um assistente pessoal bancário conversacional desenvolvido com Inteligência Artificial para revolucionar a interação do usuário com suas finanças via WhatsApp, focado em consultoria e análise de documentos.
 
 ## Visão Geral
 
-O projeto **Bank-AI-Agent** é uma arquitetura de agentes de IA especializados que trabalham em conjunto para fornecer uma interface conversacional e inteligente para serviços bancários. Em vez de navegar por menus e interfaces tradicionais, os usuários podem interagir com a IA para consultar saldos, revisar transações, obter insights financeiros e potencialmente iniciar pagamentos.
+O projeto **Bank-AI-Agent** é um bot de WhatsApp que utiliza a arquitetura de Agentes de IA (LangChain/Gemini) para fornecer serviços financeiros inteligentes. Atuando como o **Assistente Digital do BTG Pactual**, o sistema guia o usuário através de três principais fluxos de serviço:
 
-Este sistema utiliza o poder dos Large Language Models (LLMs) em uma estrutura de múltiplos agentes para lidar com tarefas financeiras complexas e fornecer respostas precisas e personalizadas.
+1. Tirar Dúvida Financeira: Respostas personalizadas baseadas em contexto de renda e gastos.
+
+2. Análise de Extrato: Processamento e análise estruturada de extratos bancários em PDF.
+
+3. Planejamento de Metas: Criação de planos detalhados de economia e investimento.
+
+Este sistema utiliza um servidor Express para gerenciar o estado da conversa (máquina de estados), garantindo que o Agente de IA receba o contexto completo em cada etapa.
 
 ## Funcionalidades Principais
 
-  * **Consulta de Saldo e Informações da Conta:** Permite que o usuário pergunte sobre o saldo atual e detalhes da conta usando linguagem natural.
-  * **Análise e Histórico de Transações:** Capacidade de buscar e analisar o histórico de transações, identificando padrões, grandes gastos ou transações específicas.
-  * **Arquitetura Multiagente:** Uso de agentes especializados (por exemplo, um `TransactionAgent`, um `AccountAgent` e um `SupervisorAgent`/Roteador) para delegar e resolver tarefas de forma eficiente.
-  * **Interface Conversacional:** Interação amigável via chat do whatsapp.
-  * **Recuperação Aumentada de Geração (RAG - *Retrieval-Augmented Generation*):** Uso de uma base de dados vetorial para fornecer contexto específico aos agentes.
+- **Análise de Documentos:** Capacidade de receber e processar arquivos PDF (extratos) para extrair dados financeiros brutos.
 
-## Tecnologias Utilizadas
+- **Consultoria Financeira Detalhada:** O Agente de IA é instruído a fornecer respostas longas, profissionais e detalhadas, como um consultor financeiro do BTG Pactual.
 
-Esta é uma lista de tecnologias comuns em projetos de agentes de IA, preencha com as que você realmente utilizou.
+- **Gerenciamento de Fluxo Conversacional (Máquina de Estados):** O servidor Node.js mantém o contexto da sessão (quem está falando, qual estado) para guiar o usuário em conversas multi-turno.
 
-  * **Linguagem de Programação:** servidor para receber as requisições em expressjs, modelo de agente em python.
-  * **Framework de Agentes/LLMs:** `[Ex: LangChain, LangGraph, CrewAI, AutoGen, Langchain4j]`
-  * **Modelo de Linguagem (LLM):** `[Ex: OpenAI GPT-4, Gemini, Mistral, Llama 3]`
+- **Arquitetura Baseada em Ferramentas (Tool Calling Agent):** O Agente de IA usa ferramentas especializadas para delegar e resolver tarefas específicas (análise estruturada de PDF, planejamento de metas).
+
+- **Interface Conversacional:** Interação amigável via chat do WhatsApp, integrada pela API da Twilio.
+
+## ⚙️ Tecnologias Utilizadas
+
+| Componente              | Tecologia               | Uso Específico                                                            |
+| :---------------------- | :---------------------- | :------------------------------------------------------------------------ |
+| **Linguagem**           | JavaScript (ES Modules) | Servidor e lógica de Agente.                                              |
+| **Servidor/Webhook**    | Express.js              | Roteamento e recebimento de webhooks da Twilio.                           |
+| **Comunicação**         | Twilio API              | Envio/Recebimento de mensagens e mídias do WhatsApp.                      |
+| **LLM/Agentes**         | LangChain.js            | Framework para Agentes, Tools e Prompts.                                  |
+| **Modelo de Linguagem** | Google Gemini 2.5 Flash | O LLM central para raciocínio e geração de texto.                         |
+| **Parsing Estruturado** | Zod + LangChain         | Definição e validação de schemas de saída JSON (para análise de extrato). |
+| **Leitura de PDF**      | `pdfreader`             | Extração do texto bruto de arquivos PDF.                                  |
+
+## 📐 Contexto e Diagramas
+
+O projeto opera em um ciclo contínuo onde o `index.js` atua como o **Roteador e Gerente de Estado**, e o `agent.js` atua como o **Motor de Decisão e Lógica de IA**.
+
+### Diagrama de Sequência (Fluxo Completo)
+
+Este diagrama detalha como a mensagem (por exemplo, um PDF de extrato) viaja do WhatsApp até a análise da IA e o retorno da resposta.
+
+### Diagrama de Máquina de Estados (Gerenciado por index.js)
+
+O index.js utiliza a variável userSessions para garantir que o usuário seja guiado por fluxos de conversação multi-turno de forma correta, com o comando universal 'cancelar' ou 'menu' sempre disponível.
 
 ## Como Executar o Projeto (Guia Rápido)
 
@@ -88,6 +114,4 @@ Bank-AI-Agent/
     └── data/             # Dados de exemplo/simulados (e.g., histórico de transações)
 ```
 
-
-
------
+---
