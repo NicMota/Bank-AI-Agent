@@ -153,8 +153,10 @@ app.post("/twilio-webhook", async (req, res) => {
 
           // --- Chamando sua função JS ---
           const promptResponse = await receive_prompt(localFilePath);
-          await sendTwilioMessage(fromNumber, promptResponse);
 
+          for (const part of promptResponse) {
+            console.log("\n\n\npart:" + part);
+          }
           fs.unlinkSync(localFilePath); // Limpa o arquivo
           console.log(`Arquivo temporário deletado: ${localFilePath}`);
 
