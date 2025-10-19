@@ -33,6 +33,7 @@ const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash", 
   temperature: 0,
   apiKey: apiKey,
+  maxOutputTokens: 4096
 });
 
 // --- 3. Ferramentas ---
@@ -76,15 +77,51 @@ const analyseTransactionsTool = new DynamicStructuredTool({
 });
 const goalPlanTool = new DynamicStructuredTool({
   name: 'goal_plan',
-  description: 'analisa uma meta e retorna um plano para seu alcance',
+  description: 'analisa uma meta financeira e retorna um plano de ação detalhado para alcançá-la',
   schema: z.object({
-    goal: z.string().describe("A descrição da meta, que pode incluir salário, gastos e tempo"),
+    // Mantemos apenas 'goal' por enquanto, o LLM vai extrair os detalhes do texto
+    goal: z.string().describe("A descrição da meta financeira do usuário, que pode incluir valor desejado, prazo, salário atual, gastos médios, etc."), 
   }),
   func: async ({ goal }) => {
-    const prompt = `Analise a seguinte meta e formule um plano de ação para seu alcance...
-{goal}`;
-    const formattedPrompt = await PromptTemplate.fromTemplate(prompt).format({ goal });
+    
+    // ✅ NOVO PROMPT DETALHADO PARA A FERRAMENTA
+    const detailedPromptTemplate = `Você é um planejador financeiro experiente do BTG Pactual. Analise a seguinte meta financeira descrita pelo cliente e crie um plano de ação DETALHADO, COMPLETO e ABRANGENTE em uma única resposta.
+
+    Meta do Cliente: "{goal}"
+
+    O plano deve incluir OBRIGATORIAMENTE os seguintes pontos, de forma bem explicada:
+    1.  **Resumo da Meta:** Confirme os detalhes da meta (valor, prazo, etc.) que você entendeu da descrição.
+    2.  **Cálculo de Poupança Mensal:** Calcule EXATAMENTE quanto o cliente precisa economizar por mês para atingir o valor desejado no prazo estipulado. Considere apenas o aporte mensal, sem juros compostos para simplificar o cálculo inicial, mas mencione que investimentos podem acelerar o processo.
+    3.  **Análise de Viabilidade (se possível):** Se o cliente mencionou salário e/ou gastos na descrição da meta, comente brevemente se a economia mensal necessária parece viável com base nesses números. Se não mencionou, sugira que ele avalie isso.
+    4.  **Estratégia de Investimento Sugerida (BTG Pactual):** Recomende CATEGORIAS de investimentos oferecidos pelo BTG Pactual que sejam adequadas para o PRAZO da meta.
+        * Para prazos curtos (até 2 anos): Sugira opções conservadoras como CDBs de liquidez diária ou Fundos DI do BTG.
+        * Para prazos médios (2 a 5 anos): Sugira um mix, como Tesouro Direto (IPCA+ ou Prefixado), LCIs/LCAs do BTG, ou Fundos Multimercado com perfil moderado.
+        * Para prazos longos (acima de 5 anos): Sugira incluir opções com maior potencial de retorno (e risco), como Fundos de Ações, Ações diretamente via Home Broker BTG, ou Fundos Imobiliários (FIIs).
+        * **SEMPRE** mencione que a escolha final depende do perfil de risco do cliente e que ele pode fazer uma análise de perfil (suitability) no app BTG.
+    5.  **Passos Práticos no BTG Pactual:** Descreva os próximos passos concretos que o cliente pode tomar usando os serviços do BTG (Ex: "1. Abra sua conta no BTG Pactual (se ainda não tiver). 2. Faça o teste de perfil de investidor no app. 3. Explore as opções de [Categoria Sugerida] na nossa plataforma de investimentos. 4. Considere agendar uma conversa com um de nossos assessores de investimento para um plano personalizado.").
+    6.  **Considerações Adicionais:** Inclua uma breve menção sobre a importância de ter uma reserva de emergência SEPARADA da meta e sobre a necessidade de revisar e ajustar o plano periodicamente (anualmente, por exemplo).
+    7.  **Tom:** Mantenha um tom extremamente cordial, profissional e encorajador, como um consultor financeiro do BTG Pactual.
+
+    Formate a resposta de maneira clara, usando títulos ou bullet points para separar as seções. NÃO use a estrutura Thought/Action/Observation aqui. Gere apenas a resposta final completa.`;
+
+    // Cria e formata o prompt
+    const formattedPrompt = await PromptTemplate.fromTemplate(detailedPromptTemplate).format({ goal });
+    
+    // Invoca o LLM com o prompt detalhado
     const response = await llm.invoke(formattedPrompt);
+
+    console.log("------------------------------------");
+      console.log("RAW LLM Response (goalPlanTool):");
+      console.dir(response, { depth: null }); // Mostra o objeto completo
+      console.log("------------------------------------");
+
+      // Verifique se a resposta tem metadados e o finishReason
+      if (response.response_metadata && response.response_metadata.finishReason) {
+        console.log(`LLM Finish Reason: ${response.response_metadata.finishReason}`);
+        // Possíveis razões: "STOP", "MAX_TOKENS", "SAFETY", "RECITATION", "OTHER"
+      }
+    
+    // Retorna o conteúdo da resposta
     return response.content;
   },
 });
@@ -97,9 +134,17 @@ const systemPrompt = `
     responda cordialmente e direcione a conversa sempre para servicos internos
     do BTG.
 
-    !!IMPORTANTE!! o usuario deve ter suas duvidas metas e etc respondidas em uma só mensagem. Por isso, 
-    de respostas longas e abrangentes que contenham todo o conteudo necessário para a resposta. !!!
-`;
+    !! INSTRUÇÕES FUNDAMENTAIS:
+    - TODAS AS RESPOSTAS DEVEM TER NO MÍNIMO 6 PARÁGRAFOS BEM DESENVOLVIDOS.
+    - Nunca responda de forma curta ou superficial.
+    - Mesmo que a pergunta do usuário seja simples, desenvolva um raciocínio amplo, contextualize, explique conceitos financeiros, traga exemplos práticos, cenários e recomendações adicionais.
+    - Use um tom profissional, cordial e consultivo, como um especialista do BTG Pactual.
+    - Finalize sempre com um **resumo prático** e uma **chamada para ação** relacionada aos serviços do BTG.
+
+    Evite respostas no estilo “one-liner” ou apenas listas secas.
+    `;
+
+
 
 const agentPrompt = ChatPromptTemplate.fromMessages([
   ['system', systemPrompt],
@@ -123,8 +168,6 @@ const agentExecutor = new AgentExecutor({
 // --- 5. Execução ---
 export async function receive_prompt(message) {
 
-
-
   if (message.startsWith('./')) {
     if (fs.existsSync(message)) {
       console.log("Lendo PDF...");
@@ -135,17 +178,21 @@ export async function receive_prompt(message) {
         console.log("Erro ao ler PDF:", e.message);
         return; 
       }
+
     } else {
       console.log("Erro: Arquivo não encontrado.");
       return;
     }
   }
   
-  const result = await agentExecutor.invoke({
-    input: message,
-    chat_history: [], // Envia histórico vazio
-  });
+    const result = await agentExecutor.invoke({
+        input: message,
+        chat_history: [], // Envia histórico vazio
+    });
 
-  console.log("\nAssistente:", result.output);
+    console.log("\nAssistente:", result.output);
 }
 
+
+
+await receive_prompt("viajar para europa com 5000 reais, ganho 2000 por mes e gasto 1000 por mes, quero fazer isso ate 2028 ");
