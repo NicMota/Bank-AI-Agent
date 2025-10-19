@@ -14,7 +14,36 @@ import { receive_prompt } from "../agentjs/agent.js";
 
 const app = express();
 
+// --- GERENCIADOR DE ESTADO DE CONVERSA ---
 const userSessions = {};
+// --- FIM DO GERENCIADOR DE ESTADO ---
+
+// =======================================================
+// --- [ATUALIZADO] PERSONA DE USUÁRIO MOCKADA ---
+// =======================================================
+// O 'financialGoal' foi removido, pois será perguntado.
+const mockUserPersona = {
+  name: "Bruno Silva",
+  age: 32,
+  profession: "Engenheiro de Software",
+  monthlyIncome: 12500.0,
+  fixedExpenses: {
+    aluguel: 3500.0,
+    contas: 450.0, // Luz, Água, Internet
+    financiamentoCarro: 1200.0,
+  },
+  variableExpenses: {
+    supermercado: 1500.0,
+    restaurantesDelivery: 1300.0, // Gasto problemático
+    lazer: 800.0,
+    transporte: 400.0,
+  },
+  investments: {
+    CDB_BTG: 25000.0,
+    Acoes_BTG: 15000.0,
+  },
+};
+// =======================================================
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +54,6 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 
-// --- [MUDANÇA] Inicializa o 'client' a partir do import ---
 const client = twilio(accountSid, authToken);
 
 async function sendTwilioMessage(to, body, mediaUrl = null, actions = null) {
@@ -80,7 +108,7 @@ app.post("/twilio-webhook", async (req, res) => {
       "Digite o número da opção desejada:\n" +
       "*1* - Tirar Dúvida Financeira\n" +
       "*2* - Análise de Extrato (via PDF)\n" +
-      "*3* - Planejamento de Metas";
+      "*3* - Planejamento de Metas"; // [MENSAGEM SIMPLIFICADA]
     await sendTwilioMessage(fromNumber, menuBody, null);
 
     // 2.2. Estado: Esperando um PDF para análise
@@ -92,7 +120,6 @@ app.post("/twilio-webhook", async (req, res) => {
       if (mediaType === "application/pdf") {
         console.log(`Mídia recebida: ${mediaUrl} (Tipo: ${mediaType})`);
 
-        // [NOTA] process.cwd() está correto pois você roda o node da raiz
         const uploadsDir = path.join(process.cwd(), "tmp/public/incoming_pdf/");
         if (!fs.existsSync(uploadsDir))
           fs.mkdirSync(uploadsDir, { recursive: true });
@@ -124,10 +151,9 @@ app.post("/twilio-webhook", async (req, res) => {
           });
           console.log(`Arquivo salvo com sucesso: ${localFilePath}`);
 
-          // --- [MUDANÇA] Chamando sua nova função JS ---
-          // (Assumindo que receive_prompt é assíncrona)
-          await receive_prompt(localFilePath);
-          // (Se não for assíncrona, remova o await)
+          // --- Chamando sua função JS ---
+          const promptResponse = await receive_prompt(localFilePath);
+          await sendTwilioMessage(fromNumber, promptResponse);
 
           fs.unlinkSync(localFilePath); // Limpa o arquivo
           console.log(`Arquivo temporário deletado: ${localFilePath}`);
@@ -155,111 +181,69 @@ app.post("/twilio-webhook", async (req, res) => {
     // 2.3. Fluxo de Dúvida Financeira (Opção 1)
     // ==============================================================
   } else if (currentUserState.state === "AWAITING_FINANCIAL_QUESTION") {
-    currentUserState.data.question = incomingMsg;
-    currentUserState.state = "AWAITING_FINANCIAL_CONTEXT_INCOME";
-    userSessions[fromNumber] = currentUserState;
-    const responseMsg =
-      "Excelente pergunta. Para que o BTG Pactual possa te dar uma dica *personalizada* e realista, preciso de um pouco de contexto.\n\n" +
-      "*Qual é a sua renda mensal média (R$)?*\n(Ex: 5000)\n\n" +
-      "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
-    await sendTwilioMessage(fromNumber, responseMsg);
-  } else if (currentUserState.state === "AWAITING_FINANCIAL_CONTEXT_INCOME") {
-    currentUserState.data.income = incomingMsg;
-    currentUserState.state = "AWAITING_FINANCIAL_CONTEXT_EXPENSES";
-    userSessions[fromNumber] = currentUserState;
-    const responseMsg =
-      "Entendido. E quais você diria que são suas *principais categorias de gastos* hoje?\n\n" +
-      "(Ex: Aluguel, Alimentação/iFood, Cartão de crédito, etc.)\n\n" +
-      "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
-    await sendTwilioMessage(fromNumber, responseMsg);
-  } else if (currentUserState.state === "AWAITING_FINANCIAL_CONTEXT_EXPENSES") {
-    currentUserState.data.expenses = incomingMsg;
-    const { question, income, expenses } = currentUserState.data;
+    // Usuário enviou a pergunta
+    const userQuestion = incomingMsg;
+    const persona = mockUserPersona; // Pega a persona mockada
 
-    console.log(
-      "[Node] SIMULAÇÃO: Chamando LLM de Dúvidas com:",
-      currentUserState.data
-    );
-    // TODO: Chamar seu agent.js aqui
-    // const llmAnswer = await receive_prompt_question(currentUserState.data);
-    const promptMsg =
-      "eu tenho uma questão sobre finanças pessoais: " +
-      question +
-      ", tenho uma renda em torno de:" +
-      income +
-      ", minha maior despesa é" +
-      expenses;
-    receive_prompt(promptMsg);
-    const llmAnswer =
-      `*Análise do BTG Pactual:*\n\n` +
-      `_(Resposta do LLM: Com base na sua renda de *${income}* e gastos com *${expenses}*, a melhor forma de *${question}* é... [placeholder da IA])_\n\n` +
-      `Digite "Menu" para voltar ao início.`;
-    await sendTwilioMessage(fromNumber, llmAnswer);
-    delete userSessions[fromNumber];
+    console.log("[Node] Chamando LLM de Dúvidas com Persona Mockada");
+
+    // Cria o prompt detalhado usando a persona
+    const promptMsg = `
+      Contexto do Usuário:
+      - Nome: ${persona.name}
+      - Renda Mensal: R$ ${persona.monthlyIncome}
+      - Gastos Fixos Principais: ${JSON.stringify(persona.fixedExpenses)}
+      - Gastos Variáveis Principais: ${JSON.stringify(persona.variableExpenses)}
+      - Investimentos Atuais: ${JSON.stringify(persona.investments)}
+      
+      Dúvida do Usuário: "${userQuestion}"
+      
+      Por favor, aja como um especialista do BTG Pactual e responda a esta dúvida de forma prática, usando o contexto fornecido.
+    `;
+
+    // Chama o LLM
+    const promptResponse = await receive_prompt(promptMsg);
+
+    await sendTwilioMessage(fromNumber, promptResponse);
+    delete userSessions[fromNumber]; // Limpa o estado
 
     // ==============================================================
-    // 2.4. Fluxo de Planejamento de Meta (Opção 3)
+    // 2.4. [NOVO] Fluxo de Planejamento de Meta (Opção 3)
     // ==============================================================
-  } else if (currentUserState.state === "AWAITING_GOAL_DESCRIPTION") {
-    currentUserState.data.goalDescription = incomingMsg;
-    currentUserState.state = "AWAITING_INCOME";
-    userSessions[fromNumber] = currentUserState;
-    const responseMsg =
-      "Ótimo objetivo. Agora, *qual é a sua renda mensal média (R$)?*\n" +
-      "(Ex: 5000)\n\n" +
-      "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
-    await sendTwilioMessage(fromNumber, responseMsg);
-  } else if (currentUserState.state === "AWAITING_INCOME") {
-    currentUserState.data.monthlyIncome = incomingMsg;
-    currentUserState.state = "AWAITING_TIMEFRAME";
-    userSessions[fromNumber] = currentUserState;
-    const responseMsg =
-      "Perfeito. *Em quanto tempo você planeja alcançar essa meta?*\n" +
-      "(Ex: 6 meses, 1 ano)\n\n" +
-      "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
-    await sendTwilioMessage(fromNumber, responseMsg);
-  } else if (currentUserState.state === "AWAITING_TIMEFRAME") {
-    currentUserState.data.timeframe = incomingMsg;
-    currentUserState.state = "AWAITING_GOAL_PRICE";
-    userSessions[fromNumber] = currentUserState;
-    const responseMsg =
-      "Estamos quase lá! *Qual é o valor total (R$)* que você precisa para esta meta?\n" +
-      "(Ex: 10000)\n\n" +
-      "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
-    await sendTwilioMessage(fromNumber, responseMsg);
-  } else if (currentUserState.state === "AWAITING_GOAL_PRICE") {
-    currentUserState.data.goalPrice = incomingMsg;
-    const { goalDescription, monthlyIncome, timeframe, goalPrice } =
-      currentUserState.data;
+  } else if (currentUserState.state === "AWAITING_GOAL_PROMPT") {
+    // Usuário enviou a descrição da meta
+    const userGoal = incomingMsg;
+    const persona = mockUserPersona; // Pega a persona mockada
 
-    console.log(
-      "[Node] SIMULAÇÃO: Chamando LLM de Metas com:",
-      currentUserState.data
-    );
-    const objetoMeta =
-      "minha meta é " +
-      goalDescription +
-      ", tenho uma renda de" +
-      monthlyIncome +
-      ", num tempo de " +
-      timeframe +
-      ", o valor da minha meta gira em torno de:" +
-      goalPrice +
-      "; Por favor faça o planejamento para que eu consiga cumprir a minha meta";
+    console.log("[Node] Chamando LLM de Metas com Persona Mockada e Meta Real");
 
-    await receive_prompt(objetoMeta);
+    // Cria o prompt detalhado
+    const promptMsg = `
+      Contexto do Usuário:
+      - Nome: ${persona.name}
+      - Renda Mensal: R$ ${persona.monthlyIncome}
+      - Gastos Fixos Principais: ${JSON.stringify(persona.fixedExpenses)}
+      - Gastos Variáveis Principais: ${JSON.stringify(persona.variableExpenses)}
+      - Investimentos Atuais: ${JSON.stringify(persona.investments)}
+      
+      Meta Desejada do Usuário: "${userGoal}"
+      
+      Por favor, aja como um planejador financeiro do BTG Pactual e crie um plano de ação prático e detalhado para este usuário atingir sua meta.
+    `;
 
-    const llmPlan =
-      `*Plano de Metas (BTG Pactual):*\n\n` +
-      `_(Resposta do LLM: Para *${goalDescription}* (R$${goalPrice}) em *${timeframe}*, ganhando *R$${monthlyIncome}*, você deve... [placeholder da IA])_\n\n` +
-      `Digite "Menu" para voltar ao início.`;
-    await sendTwilioMessage(fromNumber, llmPlan);
-    delete userSessions[fromNumber];
+    // Chama o LLM
+    const promptResponse = await receive_prompt(promptMsg);
+
+    // Envia uma resposta placeholder
+
+    await sendTwilioMessage(fromNumber, promptResponse);
+    delete userSessions[fromNumber]; // Limpa o estado
 
     // ==============================================================
     // 2.5. Comandos do Menu (Nenhum estado ativo)
     // ==============================================================
   } else if (msgLower === "1") {
+    // --- INICIA A CONVERSA DE DÚVIDA ---
     userSessions[fromNumber] = {
       state: "AWAITING_FINANCIAL_QUESTION",
       data: {},
@@ -268,12 +252,13 @@ app.post("/twilio-webhook", async (req, res) => {
       "Ótimo! O primeiro passo para a saúde financeira é o conhecimento. 💰\n\n" +
       "*Qual é a sua pergunta?*\n\n" +
       "Exemplos:\n" +
-      "- Como posso reduzir meus gastos?\n" +
+      "- Como posso reduzir meus gastos com delivery?\n" +
       "- Qual o primeiro passo para investir?\n" +
-      "- Vale a pena amortizar meu financiamento?\n\n" +
+      "- Com base no meu perfil, vale a pena amortizar meu financiamento?\n\n" +
       "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
     await sendTwilioMessage(fromNumber, responseMsg);
   } else if (msgLower === "2") {
+    // --- INICIA A CONVERSA DE PDF ---
     userSessions[fromNumber] = {
       state: "AWAITING_PDF",
       data: {},
@@ -282,17 +267,18 @@ app.post("/twilio-webhook", async (req, res) => {
       "Certo. Para que eu possa analisar seu extrato, por favor, me envie o *arquivo PDF* do seu banco.";
     await sendTwilioMessage(fromNumber, responseMsg);
   } else if (msgLower === "3") {
+    // --- [MUDANÇA AQUI] INICIA A CONVERSA DE META ---
     userSessions[fromNumber] = {
-      state: "AWAITING_GOAL_DESCRIPTION",
+      state: "AWAITING_GOAL_PROMPT", // Define o novo estado
       data: {},
     };
     const responseMsg =
       "Vamos lá! Planejar é o segredo do sucesso. 🚀\n\n" +
       "Primeiro, me diga: *qual é o seu principal objetivo financeiro?*\n\n" +
       "Exemplos:\n" +
-      "- Guardar dinheiro para uma viagem\n" +
+      "- Guardar 20.000 para uma viagem em 1 ano\n" +
       "- Começar a investir para a aposentadoria\n" +
-      "- Reduzir minhas dívidas\n\n" +
+      "- Reduzir minhas dívidas pela metade\n\n" +
       "_(Digite *cancelar* a qualquer momento para voltar ao menu.)_";
     await sendTwilioMessage(fromNumber, responseMsg);
 
