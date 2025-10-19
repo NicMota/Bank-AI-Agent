@@ -42,13 +42,29 @@ Este sistema utiliza um servidor Express para gerenciar o estado da conversa (m�
 
 O projeto opera em um ciclo contínuo onde o `index.js` atua como o **Roteador e Gerente de Estado**, e o `agent.js` atua como o **Motor de Decisão e Lógica de IA**.
 
-### Diagrama de Sequência (Fluxo Completo)
+### 1. Diagrama de Sequência Principal (Visão Geral)
 
-Este diagrama detalha como a mensagem (por exemplo, um PDF de extrato) viaja do WhatsApp até a análise da IA e o retorno da resposta.
+Este diagrama mostra o ciclo de vida de **toda** requisição que chega ao servidor. Os **Passos 3, 4, e 5** representam os pontos de decisão, onde o Handler (`index.js`) verifica o estado do usuário e delega a tarefa ao fluxo específico.
+
+![Visão Geral](./img_readme/visao_geral.png)
+
+### 2. Fluxo de Análise de Extrato (Sub-Fluxo 'Análise de Extrato')
+
+Este sub-fluxo é executado quando o usuário está no estado `AWAITING_PDF`. Ele detalha a interação com o sistema de arquivos e a ferramenta `analyseTransactionsTool` do Agente.
+
+![Sub-Fluxo 'Análise de Extrato'](./img_readme/analise_extrato.png)
+
+### 3. Fluxo Conversacional (Sub-Fluxo 'Dúvidas e Metas')
+
+Este sub-fluxo detalha a lógica de coleta de dados em múltiplas etapas (estados intermediários) ou a chamada direta ao Agente LLM (última etapa), usando as ferramentas `financeDoubtTool` e `goalPlanTool`.
+
+![Sub-Fluxo 'Dúvidas e Metas'](./img_readme/fluxo_conversacional.png)
 
 ### Diagrama de Máquina de Estados (Gerenciado por index.js)
 
 O `index.js` utiliza a variável `userSessions` para garantir que o usuário seja guiado por fluxos de conversação multi-turno de forma correta, com o comando universal **'cancelar'** ou **'menu'** sempre disponível.
+
+![Estados contidos no index.js](./img_readme/diagrama_estados.png)
 
 ## 🚀 Como Executar o Projeto (Guia Rápido)
 
