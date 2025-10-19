@@ -133,7 +133,8 @@ Bank-AI-Agent/
 ├── .env                    # Variáveis de ambiente e chaves
 ├── node_modules/           # Dependências do Node.js
 ├── package.json            # Dependências e scripts
-├── index.js                # Servidor Express, Webhook da Twilio e Gerenciador de Estados
+├── server
+|   ├── index.js            # Servidor Express, Webhook da Twilio e Gerenciador de Estados
 └── agentjs/
     ├── agent.js            # Lógica do Agente LLM (LangChain, Gemini, Tools)
     └── tools.js            # Funções utilitárias (e.g., readPdf)
