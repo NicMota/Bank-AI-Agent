@@ -188,7 +188,7 @@ function splitMessageByWords(text, maxLength = 1500) {
 
 export async function receive_prompt(message) {
 
-  if (message.startsWith('/')) {
+  if (message.startsWith('./')) {
     if (fs.existsSync(message)) {
       console.log("Lendo PDF...");
       try {
@@ -207,19 +207,22 @@ export async function receive_prompt(message) {
     }
   }
   
-    const result = await agent.invoke({
-      messages:[{role:"user",content:message},
-       
-      ]},
-      { configurable: { thread_id: "1" } }
-    );
+  const result = await agent.invoke({
+    messages:[{role:"user",content:message},
+      
+    ]},
+    { configurable: { thread_id: "1" } }
+  );
     
     
-    const text = splitMessageByWords(result.messages.at(-1).content,1500);
+  const text = splitMessageByWords(result.messages.at(-1).content,1500);
 
-    console.log("\nAssistente:", text);
+  console.log("\nAssistente:", text);
 
-    return result.messages[1].content;
+  
+
+  return text;
 } 
 
 
+receive_prompt('./extrato.pdf');
