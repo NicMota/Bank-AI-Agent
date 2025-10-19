@@ -89,17 +89,17 @@ const goalPlanTool = new DynamicStructuredTool({
     Meta do Cliente: "{goal}"
 
     O plano deve incluir OBRIGATORIAMENTE os seguintes pontos, de forma bem explicada:
-    1.  **Resumo da Meta:** Confirme os detalhes da meta (valor, prazo, etc.) que você entendeu da descrição.
-    2.  **Cálculo de Poupança Mensal:** Calcule EXATAMENTE quanto o cliente precisa economizar por mês para atingir o valor desejado no prazo estipulado. Considere apenas o aporte mensal, sem juros compostos para simplificar o cálculo inicial, mas mencione que investimentos podem acelerar o processo.
-    3.  **Análise de Viabilidade (se possível):** Se o cliente mencionou salário e/ou gastos na descrição da meta, comente brevemente se a economia mensal necessária parece viável com base nesses números. Se não mencionou, sugira que ele avalie isso.
-    4.  **Estratégia de Investimento Sugerida (BTG Pactual):** Recomende CATEGORIAS de investimentos oferecidos pelo BTG Pactual que sejam adequadas para o PRAZO da meta.
+    1.  *Resumo da Meta:* Confirme os detalhes da meta (valor, prazo, etc.) que você entendeu da descrição.
+    2.  *Cálculo de Poupança Mensal:* Calcule EXATAMENTE quanto o cliente precisa economizar por mês para atingir o valor desejado no prazo estipulado. Considere apenas o aporte mensal, sem juros compostos para simplificar o cálculo inicial, mas mencione que investimentos podem acelerar o processo.
+    3.  *Análise de Viabilidade (se possível):* Se o cliente mencionou salário e/ou gastos na descrição da meta, comente brevemente se a economia mensal necessária parece viável com base nesses números. Se não mencionou, sugira que ele avalie isso.
+    4.  *Estratégia de Investimento Sugerida (BTG Pactual):* Recomende CATEGORIAS de investimentos oferecidos pelo BTG Pactual que sejam adequadas para o PRAZO da meta.
         * Para prazos curtos (até 2 anos): Sugira opções conservadoras como CDBs de liquidez diária ou Fundos DI do BTG.
         * Para prazos médios (2 a 5 anos): Sugira um mix, como Tesouro Direto (IPCA+ ou Prefixado), LCIs/LCAs do BTG, ou Fundos Multimercado com perfil moderado.
         * Para prazos longos (acima de 5 anos): Sugira incluir opções com maior potencial de retorno (e risco), como Fundos de Ações, Ações diretamente via Home Broker BTG, ou Fundos Imobiliários (FIIs).
         * **SEMPRE** mencione que a escolha final depende do perfil de risco do cliente e que ele pode fazer uma análise de perfil (suitability) no app BTG.
-    5.  **Passos Práticos no BTG Pactual:** Descreva os próximos passos concretos que o cliente pode tomar usando os serviços do BTG (Ex: "1. Abra sua conta no BTG Pactual (se ainda não tiver). 2. Faça o teste de perfil de investidor no app. 3. Explore as opções de [Categoria Sugerida] na nossa plataforma de investimentos. 4. Considere agendar uma conversa com um de nossos assessores de investimento para um plano personalizado.").
-    6.  **Considerações Adicionais:** Inclua uma breve menção sobre a importância de ter uma reserva de emergência SEPARADA da meta e sobre a necessidade de revisar e ajustar o plano periodicamente (anualmente, por exemplo).
-    7.  **Tom:** Mantenha um tom extremamente cordial, profissional e encorajador, como um consultor financeiro do BTG Pactual.
+    5.  *Passos Práticos no BTG Pactual:* Descreva os próximos passos concretos que o cliente pode tomar usando os serviços do BTG (Ex: "1. Abra sua conta no BTG Pactual (se ainda não tiver). 2. Faça o teste de perfil de investidor no app. 3. Explore as opções de [Categoria Sugerida] na nossa plataforma de investimentos. 4. Considere agendar uma conversa com um de nossos assessores de investimento para um plano personalizado.").
+    6.  *Considerações Adicionais:* Inclua uma breve menção sobre a importância de ter uma reserva de emergência SEPARADA da meta e sobre a necessidade de revisar e ajustar o plano periodicamente (anualmente, por exemplo).
+    7.  *Tom:** Mantenha um tom extremamente cordial, profissional e encorajador, como um consultor financeiro do BTG Pactual.
 
     Formate a resposta de maneira clara, usando títulos ou bullet points para separar as seções. NÃO use a estrutura Thought/Action/Observation aqui. Gere apenas a resposta final completa.`;
 
@@ -133,13 +133,29 @@ const systemPrompt = `
     responda cordialmente e direcione a conversa sempre para servicos internos
     do BTG.
 
+
+    !! FORMATACÃO PARA TODAS AS RESPOSTAS:
+    Formate a resposta **exclusivamente para WhatsApp**, usando:
+    - *negrito* com asteriscos simples
+    - _itálico_ com underline
+    - ~tachado~ com til
+    - • ou - para listas
+    
+    - evite títulos com #, ## ou ###, e evite links HTML ou Markdown de GitHub
+    - mantenha parágrafos e quebras de linha
+
+    Gere apenas o texto que será enviado pelo WhatsApp, sem cabeçalhos de markdown de GitHub.
+
     !! INSTRUÇÕES FUNDAMENTAIS:
     - TODAS AS RESPOSTAS DEVEM TER NO MÍNIMO 6 PARÁGRAFOS BEM DESENVOLVIDOS.
     - Nunca responda de forma curta ou superficial.
     - Mesmo que a pergunta do usuário seja simples, desenvolva um raciocínio amplo, contextualize, explique conceitos financeiros, traga exemplos práticos, cenários e recomendações adicionais.
     - Use um tom profissional, cordial e consultivo, como um especialista do BTG Pactual.
-    - Finalize sempre com um **resumo prático** e uma **chamada para ação** relacionada aos serviços do BTG.
+    - Finalize sempre com um *resumo prático* e uma *chamada para ação* relacionada aos serviços do BTG.
+
     Evite respostas no estilo “one-liner” ou apenas listas secas.
+
+
     `;
 
 
@@ -240,6 +256,6 @@ export async function receive_prompt(message) {
   return text;
 } 
 
-receive_prompt('./extrato.pdf');
+receive_prompt('como funciona o mercado das ações');
 
 
