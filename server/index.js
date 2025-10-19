@@ -229,8 +229,18 @@ app.post("/twilio-webhook", async (req, res) => {
       currentUserState.data
     );
     const objetoMeta =
-      goalDescription + " " + monthlyIncome + " " + timeframe + " " + goalPrice;
-    receive_prompt(objetoMeta);
+      "minha meta é " +
+      goalDescription +
+      ", tenho uma renda de" +
+      monthlyIncome +
+      ", num tempo de " +
+      timeframe +
+      ", o valor da minha meta gira em torno de:" +
+      goalPrice +
+      "; Por favor faça o planejamento para que eu consiga cumprir a minha meta";
+
+    await receive_prompt(objetoMeta);
+
     const llmPlan =
       `*Plano de Metas (BTG Pactual):*\n\n` +
       `_(Resposta do LLM: Para *${goalDescription}* (R$${goalPrice}) em *${timeframe}*, ganhando *R$${monthlyIncome}*, você deve... [placeholder da IA])_\n\n` +
