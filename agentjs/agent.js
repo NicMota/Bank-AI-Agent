@@ -188,7 +188,7 @@ function splitMessageByWords(text, maxLength = 1500) {
 
 export async function receive_prompt(message) {
 
-  if (message.startsWith('./')) {
+  if (message.startsWith('/')) {
     if (fs.existsSync(message)) {
       console.log("Lendo PDF...");
       try {
@@ -223,7 +223,3 @@ export async function receive_prompt(message) {
 } 
 
 
-while(1){
-  let p = prompt();
-  await receive_prompt(p);
-}
