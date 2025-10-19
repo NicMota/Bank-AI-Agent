@@ -60,12 +60,6 @@ Este sub-fluxo detalha a lógica de coleta de dados em múltiplas etapas (estado
 
 ![Sub-Fluxo 'Dúvidas e Metas'](./img_readme/fluxo_conversacional.png)
 
-### Diagrama de Máquina de Estados (Gerenciado por index.js)
-
-O `index.js` utiliza a variável `userSessions` para garantir que o usuário seja guiado por fluxos de conversação multi-turno de forma correta, com o comando universal **'cancelar'** ou **'menu'** sempre disponível.
-
-![Estados contidos no index.js](./img_readme/diagrama_estados.png)
-
 ## 🚀 Como Executar o Projeto (Guia Rápido)
 
 ### Pré-requisitos
