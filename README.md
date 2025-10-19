@@ -124,7 +124,7 @@ coloque o webhook do ngrok, lembre-se de adicionar o '/twilio-webhook' ao final 
 
 ## 🛠️ Estrutura do Projeto
 
-A estrutura do projeto geralmente segue este padrão (ajuste conforme o seu código):
+A estrutura do projeto geralmente segue este padrão
 
 ```
 Bank-AI-Agent/
