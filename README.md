@@ -73,14 +73,25 @@ Instale as dependências do Node.js:
 
 ```bash
 npm install
-# ou
-yarn install
+cd agentjs
+npm install
+cd ..
 ```
 
 ### 3\. Configurar Chaves de API
 
 Crie um arquivo `.env` na raiz do projeto e adicione suas chaves e credenciais da Twilio:
+A criação de uma conta na ferramenta SandBox da Twilio é indispensável, pois ela que faz a conexão com a API do WhatsApp.
 
+(https://www.twilio.com/login)
+
+O usuário terá que criar uma conta grátis, obter o Account SID e AuthToken no Twilio Console (Página que você entra logo após se cadastrar/logar),
+desça até a seção 'Account Info' e copie os campos para o .env
+
+
+
+Após isso, clique na seção de 'Messaging' na navbar lateral do console, clique em 'Try it out', clique em 'Send a WhatsApp message'.
+Por fim, conecte ao handler da Twilio escaneando o QRCOde.
 ```Ini, TOML
 # Chave da API do Gemini
 GEMINI_API_KEY="SUA_CHAVE_GEMINI_AQUI"
@@ -97,12 +108,15 @@ PORT=3000
 Inicie o servidor Node.js:
 
 ```bash
-node index.js
+node server/index.js
 ```
 
 ### 5\. Configurar o Webhook
 
 Use uma ferramenta como **ngrok** para expor seu servidor local à internet (necessário para a Twilio) e configure o **Webhook** de mensagens do seu número de WhatsApp Twilio para o endereço:
+
+Lembra do console da Twilio na parte de 'Send a WhatsApp message'? Ainda dentro dele - após mandar a mensagem de confirmação para a twilio pelo chat do whatsapp -, vá até Sandbox settings e então
+coloque o webhook do ngrok, lembre-se de adicionar o '/twilio-webhook' ao final da sua rota HTTP,
 
 ```
 [SEU_URL_NGROK]/twilio-webhook
